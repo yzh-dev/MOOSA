@@ -25,7 +25,7 @@ class opt():
         opt.test = 'test.csv'
         opt.batch_size = 32
         opt.n_classes = 309
-        opt.model_depth = 18
+        opt.model_depth = 18#默认使用res18处理音频
         opt.resnet_shortcut = 'B'
 
 def get_arguments():

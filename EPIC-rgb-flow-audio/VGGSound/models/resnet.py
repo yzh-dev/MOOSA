@@ -135,7 +135,7 @@ class AudioAttGenModule(nn.Module):
                                 norm_layer=norm_layer))
 
         return nn.Sequential(*layers)
-
+    # 实际前向过程没有实现传统的注意力机制（如 self-attention 或 channel attention）
     def forward(self, x):
         x = self.layer4(x)
         x = self.avgpool(x)

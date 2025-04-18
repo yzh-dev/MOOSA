@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 model = dict(
     type='Recognizer3D',
     backbone=dict(
@@ -45,16 +46,16 @@ ann_file_test = 'data/kinetics400/kinetics400_val_list_rawframes.txt'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_bgr=False)
 train_pipeline = [
-    dict(type='SampleFrames', clip_len=32, frame_interval=2, num_clips=1),
-    dict(type='RawFrameDecode'),
-    dict(type='Resize', scale=(-1, 256)),
-    dict(type='RandomResizedCrop'),
-    dict(type='Resize', scale=(224, 224), keep_ratio=False),
-    dict(type='Flip', flip_ratio=0.5),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='FormatShape', input_format='NCTHW'),
-    dict(type='Collect', keys=['imgs', 'label'], meta_keys=[]),
-    dict(type='ToTensor', keys=['imgs', 'label'])
+    dict(type='SampleFrames', clip_len=32, frame_interval=2, num_clips=1),# sample 32 frames from video
+    dict(type='RawFrameDecode'),#decode the raw frames
+    dict(type='Resize', scale=(-1, 256)),#resize the frame to 256
+    dict(type='RandomResizedCrop'),#randomly crop the frame
+    dict(type='Resize', scale=(224, 224), keep_ratio=False),#resize the frame to 224
+    dict(type='Flip', flip_ratio=0.5),#flip the frame
+    dict(type='Normalize', **img_norm_cfg),#normalize the frame
+    dict(type='FormatShape', input_format='NCTHW'),#format the frame to NCTHW
+    dict(type='Collect', keys=['imgs', 'label'], meta_keys=[]),#collect the frame and label
+    dict(type='ToTensor', keys=['imgs', 'label'])#convert the frame and label to tensor
 ]
 val_pipeline = [
     dict(

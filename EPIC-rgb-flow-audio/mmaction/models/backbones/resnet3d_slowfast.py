@@ -524,35 +524,35 @@ class ResNet3dSlowFast(nn.Module):
             tuple[torch.Tensor]: The feature of the input samples extracted
                 by the backbone.
         """
-        x_slow = nn.functional.interpolate(
+        x_slow = nn.functional.interpolate(#慢速路径(slow path)处理低帧率的视频信息，捕捉语义信息
             x,
             mode='nearest',
-            scale_factor=(1.0 / self.resample_rate, 1.0, 1.0))
-        x_slow = self.slow_path.conv1(x_slow)
-        x_slow = self.slow_path.maxpool(x_slow)
+            scale_factor=(1.0 / self.resample_rate, 1.0, 1.0))#输入: [batch, 3, 8, 224, 224]  # 8帧（32/4）
+        x_slow = self.slow_path.conv1(x_slow)# -> [batch, 64, 8, 112, 112]
+        x_slow = self.slow_path.maxpool(x_slow)# -> [batch, 64, 8, 112, 112]
 
-        x_fast = nn.functional.interpolate(
+        x_fast = nn.functional.interpolate(#快速路径(fast path)处理高帧率的视频信息，捕捉快速运动
             x,
             mode='nearest',
             scale_factor=(1.0 / (self.resample_rate // self.speed_ratio), 1.0,
-                          1.0))
-        x_fast = self.fast_path.conv1(x_fast)
-        x_fast = self.fast_path.maxpool(x_fast)
-
-        if self.slow_path.lateral:
-            x_fast_lateral = self.slow_path.conv1_lateral(x_fast)
-            x_slow = torch.cat((x_slow, x_fast_lateral), dim=1)
-
+                          1.0))#输入:[batch, 3, 32, 224, 224]  # 32帧
+        x_fast = self.fast_path.conv1(x_fast)#-> [batch, 8, 32, 112, 112]
+        x_fast = self.fast_path.maxpool(x_fast)# torch.Size([16, 8, 32, 56, 56])
+        # 这段代码是SlowFast网络架构中的一个关键部分，主要用于处理慢速路径(slow path)和快速路径(fast path)之间的横向连接(lateral connection)
+        if self.slow_path.lateral:# 检查是否启用了横向连接
+            x_fast_lateral = self.slow_path.conv1_lateral(x_fast)#conv1_lateral是一个3D卷积层，用于调整快速路径特征的维度：torch.Size([16, 16, 8, 56, 56])
+            x_slow = torch.cat((x_slow, x_fast_lateral), dim=1)#拼接fast路径处理后的特征。torch.Size([16, 80, 8, 56, 56])
+            # i=0对应layer1  i=1对应layer2   i=2对应layer3  i=3对应layer4   
         for i, layer_name in enumerate(self.slow_path.res_layers):
-            if i==3:
+            if i==3:  # skip i==3: 对应'layer4'
                 break
             res_layer = getattr(self.slow_path, layer_name)
-            x_slow = res_layer(x_slow)
+            x_slow = res_layer(x_slow)# layer1: -> [batch, 256, 8, 56, 56]    layer2: -> [batch, 512, 8, 28, 28]    layer3: -> [batch, 1024, 8, 14, 14]  layer4: -> [batch, 2048, 8, 7, 7]
             res_layer_fast = getattr(self.fast_path, layer_name)
             x_fast = res_layer_fast(x_fast)
             if (i != len(self.slow_path.res_layers) - 1
                     and self.slow_path.lateral):
-                # No fusion needed in the final stage
+                # No fusion needed in the final stage。除了layer4,中间每个layer都将fast路径的特征融合到了slow路径
                 lateral_name = self.slow_path.lateral_connections[i]
                 conv_lateral = getattr(self.slow_path, lateral_name)
                 x_fast_lateral = conv_lateral(x_fast)
